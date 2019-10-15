@@ -3,8 +3,24 @@ package ruffe
 import "net/http"
 
 type Server struct {
-	mux     map[string]*http.ServeMux
-	OnError func(ctx Context, err error) error
+	handlers []Handler
+	mux      map[string]*http.ServeMux
+	OnError  func(ctx Context, err error) error
+}
+
+func New() *Server {
+	return &Server{
+		mux:      make(map[string]*http.ServeMux),
+		handlers: make([]Handler, 0),
+	}
+}
+
+func (s *Server) Use(h Handler) {
+	s.handlers = append(s.handlers, h)
+}
+
+func (s *Server) UseFunc(f func(Context) error) {
+	s.Use(HandlerFunc(f))
 }
 
 func (s *Server) Handle(pattern, method string, h Handler) *Middleware {
@@ -13,17 +29,26 @@ func (s *Server) Handle(pattern, method string, h Handler) *Middleware {
 		mux = http.NewServeMux()
 		s.mux[method] = mux
 	}
-	rt := newMiddleware(h)
+	mw := NewMiddleware(h)
 	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-		// TODO: handle content-type
+		// TODO: context should be created depends on accept and content-type header
 		ctx := &jsonCtx{r: r, w: w}
-		err := rt.Handle(ctx)
-		if err == nil {
-			return
+		for _, h := range s.handlers {
+			if err := h.Handle(ctx); err != nil {
+				s.err(ctx, err)
+				return
+			}
 		}
-		s.OnError(ctx, err)
+		err := mw.Handle(ctx)
+		if err != nil {
+			s.err(ctx, err)
+		}
 	})
-	return nil
+	return mw
+}
+
+func (s *Server) HandleFunc(pattern, method string, f func(Context) error) *Middleware {
+	return s.Handle(pattern, method, HandlerFunc(f))
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -33,4 +58,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mux.ServeHTTP(w, r)
+}
+
+func (s *Server) err(ctx Context, err error) error {
+	if s.OnError == nil {
+		return err
+	}
+	return s.OnError(ctx, err)
 }

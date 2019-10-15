@@ -1,33 +1,40 @@
 package ruffe
 
 type Middleware struct {
-	mw      *Middleware
+	parent  *Middleware
 	h       Handler
 	OnError func(ctx Context, err error) error
 }
 
-func newMiddleware(h Handler) *Middleware {
+func NewMiddleware(h Handler) *Middleware {
 	return &Middleware{
 		h: h,
 	}
 }
 
-func (m *Middleware) Add(h Handler) *Middleware {
-	m.mw = &Middleware{
-		h: m.h,
+func NewMiddlewareFunc(f func(Context) error) *Middleware {
+	return NewMiddleware(HandlerFunc(f))
+}
+
+func (m *Middleware) Wrap(h Handler) *Middleware {
+	return &Middleware{
+		parent:  m,
+		h:       h,
+		OnError: m.OnError,
 	}
-	m.h = h
-	return m.mw
+}
+
+func (m *Middleware) WrapFunc(f func(Context) error) *Middleware {
+	return m.Wrap(HandlerFunc(f))
 }
 
 func (m *Middleware) Handle(ctx Context) error {
-	if err := m.h.Handle(ctx); err != nil {
-		return m.err(ctx, err)
+	if m.parent != nil {
+		if err := m.parent.Handle(ctx); err != nil {
+			return m.err(ctx, err)
+		}
 	}
-	if m.mw == nil {
-		return nil
-	}
-	return m.err(ctx, m.mw.Handle(ctx))
+	return m.err(ctx, m.h.Handle(ctx))
 }
 
 func (m *Middleware) err(ctx Context, err error) error {
