@@ -8,7 +8,7 @@ Golang HTTP handler
 
 ### Examples
 #### 1. Create ruffe instance, add http handler and start it with http.ListenAndServer
-```
+```go
 package main
 
 import (
@@ -35,7 +35,7 @@ func hello(ctx ruffe.Context) error {
 ```
 #### Middleware
 __handler middleware__
-```
+```go
 // Ruffe Middleware
 mw := ruffe.NewMiddlewareFunc(func(_ ruffe.Context) error {
     // this handler will occurs before `hello handler`
@@ -49,7 +49,7 @@ mwh := mw.WrapFunc(hello) // WrapFunc returns middleware
 _ = rs.Handle("/", http.MethodGet, mwh) // Handle returns middleware
 ```
 __server middleware__
-```
+```go
 // Applying middleware for all handler
 rs.UseFunc(func(_ ruffe.Context) error {
     // server middleware calling before handler
@@ -60,7 +60,7 @@ rs.UseFunc(func(_ ruffe.Context) error {
 rs.HandleFunc("/", http.MethodGet, hello)
 ```
 #### Error handling
-```
+```go
 package main
 
 import (
