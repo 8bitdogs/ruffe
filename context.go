@@ -6,6 +6,7 @@ import (
 )
 
 type Context interface {
+	http.ResponseWriter
 	Request() *http.Request
 	Bind(interface{}) error
 	Result(int, interface{}) error
@@ -13,7 +14,7 @@ type Context interface {
 
 type jsonCtx struct {
 	r *http.Request
-	w http.ResponseWriter
+	http.ResponseWriter
 }
 
 func (c *jsonCtx) Request() *http.Request {
@@ -25,6 +26,6 @@ func (c *jsonCtx) Bind(v interface{}) error {
 }
 
 func (c *jsonCtx) Result(code int, v interface{}) error {
-	c.w.WriteHeader(code)
-	return json.NewEncoder(c.w).Encode(v)
+	c.WriteHeader(code)
+	return json.NewEncoder(c).Encode(v)
 }

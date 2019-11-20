@@ -32,7 +32,7 @@ func (s *Server) Handle(pattern, method string, h Handler) *Middleware {
 	mw := NewMiddleware(h)
 	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		// TODO: context should be created depends on accept and content-type header
-		ctx := &jsonCtx{r: r, w: w}
+		ctx := &jsonCtx{r: r, ResponseWriter: w}
 		for _, h := range s.handlers {
 			if err := h.Handle(ctx); err != nil {
 				s.err(ctx, err)
