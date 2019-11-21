@@ -54,9 +54,14 @@ func (c *ctx) Bind(v interface{}) error {
 }
 
 func (c *ctx) Result(code int, v interface{}) error {
-	c.Header().Add(ContentTypeHeader, c.rm.ContentType())
+	if v != nil {
+		c.Header().Add(ContentTypeHeader, c.rm.ContentType())
+	}
 	c.WriteHeader(code)
-	return c.rm.Marshal(c.ResponseWriter, v)
+	if v != nil {
+		return c.rm.Marshal(c.ResponseWriter, v)
+	}
+	return nil
 }
 
 type emptyUnmarshaler struct{}
