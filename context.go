@@ -1,8 +1,13 @@
 package ruffe
 
 import (
+	"errors"
 	"io"
 	"net/http"
+)
+
+var (
+	ErrResultWasSent = errors.New("result was sent")
 )
 
 type Context interface {
@@ -23,7 +28,7 @@ type responseMarshaler interface {
 }
 
 type ctx struct {
-	rdone bool
+	isSent bool
 	http.ResponseWriter
 	r  *http.Request
 	ru requestUnmarshaler
@@ -48,7 +53,7 @@ func ContextFromRequest(w http.ResponseWriter, r *http.Request) Context {
 }
 
 func (c *ctx) done() bool {
-	return c.rdone
+	return c.isSent
 }
 
 func (c *ctx) Request() *http.Request {
@@ -60,11 +65,14 @@ func (c *ctx) Bind(v interface{}) error {
 }
 
 func (c *ctx) Result(code int, v interface{}) error {
+	if c.isSent {
+		return ErrResultWasSent
+	}
 	if v != nil {
 		c.Header().Add(ContentTypeHeader, c.rm.ContentType())
 	}
 	c.WriteHeader(code)
-	c.rdone = true
+	c.isSent = true
 	if v != nil {
 		return c.rm.Marshal(c.ResponseWriter, v)
 	}

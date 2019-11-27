@@ -31,16 +31,10 @@ func (s *Server) Handle(pattern, method string, h Handler) {
 		mux = http.NewServeMux()
 		s.mux[method] = mux
 	}
+	h = s.middlewares.Wrap(h)
 	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		ctx := ContextFromRequest(w, r)
-		if err := s.middlewares.Handle(ctx); err != nil {
-			s.middlewares.err(ctx, err)
-			return
-		}
-		err := h.Handle(ctx)
-		if err != nil {
-			s.middlewares.err(ctx, err)
-		}
+		h.Handle(ctx)
 	})
 }
 
