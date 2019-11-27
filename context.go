@@ -6,6 +6,7 @@ import (
 )
 
 type Context interface {
+	done() bool
 	http.ResponseWriter
 	Request() *http.Request
 	Bind(interface{}) error
@@ -22,6 +23,7 @@ type responseMarshaler interface {
 }
 
 type ctx struct {
+	rdone bool
 	http.ResponseWriter
 	r  *http.Request
 	ru requestUnmarshaler
@@ -45,6 +47,10 @@ func ContextFromRequest(w http.ResponseWriter, r *http.Request) Context {
 	return result
 }
 
+func (c *ctx) done() bool {
+	return c.rdone
+}
+
 func (c *ctx) Request() *http.Request {
 	return c.r
 }
@@ -58,6 +64,7 @@ func (c *ctx) Result(code int, v interface{}) error {
 		c.Header().Add(ContentTypeHeader, c.rm.ContentType())
 	}
 	c.WriteHeader(code)
+	c.rdone = true
 	if v != nil {
 		return c.rm.Marshal(c.ResponseWriter, v)
 	}

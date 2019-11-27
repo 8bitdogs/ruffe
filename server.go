@@ -22,29 +22,30 @@ func (s *Server) UseFunc(f func(Context) error) {
 	s.Use(HandlerFunc(f))
 }
 
-func (s *Server) Handle(pattern, method string, h Handler) *Middleware {
+func (s *Server) Handle(pattern, method string, h Handler) {
+	if h == nil {
+		return
+	}
 	mux, ok := s.mux[method]
 	if !ok {
 		mux = http.NewServeMux()
 		s.mux[method] = mux
 	}
-	mw := NewMiddleware(h)
 	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		ctx := ContextFromRequest(w, r)
-		if err := h.Handle(ctx); err != nil {
+		if err := s.middlewares.Handle(ctx); err != nil {
 			s.middlewares.err(ctx, err)
 			return
 		}
-		err := mw.Handle(ctx)
+		err := h.Handle(ctx)
 		if err != nil {
 			s.middlewares.err(ctx, err)
 		}
 	})
-	return mw
 }
 
-func (s *Server) HandleFunc(pattern, method string, f func(Context) error) *Middleware {
-	return s.Handle(pattern, method, HandlerFunc(f))
+func (s *Server) HandleFunc(pattern, method string, f func(Context) error) {
+	s.Handle(pattern, method, HandlerFunc(f))
 }
 
 func (s *Server) OnError(f func(Context, error) error) {

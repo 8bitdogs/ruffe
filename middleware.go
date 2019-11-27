@@ -29,6 +29,9 @@ func (m *Middleware) WrapFunc(f func(Context) error) *Middleware {
 }
 
 func (m *Middleware) Handle(ctx Context) error {
+	if ctx.done() {
+		return nil
+	}
 	if m.parent != nil {
 		if err := m.parent.Handle(ctx); err != nil {
 			return m.err(ctx, err)
