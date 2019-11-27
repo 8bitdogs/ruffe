@@ -3,7 +3,7 @@ package ruffe
 type Middleware struct {
 	parent  *Middleware
 	h       Handler
-	OnError func(ctx Context, err error) error
+	OnError func(Context, error) error
 }
 
 func NewMiddleware(h Handler) *Middleware {

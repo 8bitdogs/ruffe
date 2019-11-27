@@ -3,20 +3,19 @@ package ruffe
 import "net/http"
 
 type Server struct {
-	handlers []Handler
-	mux      map[string]*http.ServeMux
-	OnError  func(ctx Context, err error) error
+	middlewares *Middleware
+	mux         map[string]*http.ServeMux
 }
 
 func New() *Server {
 	return &Server{
-		mux:      make(map[string]*http.ServeMux),
-		handlers: make([]Handler, 0),
+		mux:         make(map[string]*http.ServeMux),
+		middlewares: NewMiddlewareFunc(func(Context) error { return nil }),
 	}
 }
 
 func (s *Server) Use(h Handler) {
-	s.handlers = append(s.handlers, h)
+	s.middlewares = s.middlewares.Wrap(h)
 }
 
 func (s *Server) UseFunc(f func(Context) error) {
@@ -32,15 +31,13 @@ func (s *Server) Handle(pattern, method string, h Handler) *Middleware {
 	mw := NewMiddleware(h)
 	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		ctx := ContextFromRequest(w, r)
-		for _, h := range s.handlers {
-			if err := h.Handle(ctx); err != nil {
-				s.err(ctx, err)
-				return
-			}
+		if err := h.Handle(ctx); err != nil {
+			s.middlewares.err(ctx, err)
+			return
 		}
 		err := mw.Handle(ctx)
 		if err != nil {
-			s.err(ctx, err)
+			s.middlewares.err(ctx, err)
 		}
 	})
 	return mw
@@ -50,6 +47,10 @@ func (s *Server) HandleFunc(pattern, method string, f func(Context) error) *Midd
 	return s.Handle(pattern, method, HandlerFunc(f))
 }
 
+func (s *Server) OnError(f func(Context, error) error) {
+	s.middlewares.OnError = f
+}
+
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mux, ok := s.mux[r.Method]
 	if !ok {
@@ -57,11 +58,4 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mux.ServeHTTP(w, r)
-}
-
-func (s *Server) err(ctx Context, err error) error {
-	if s.OnError == nil {
-		return err
-	}
-	return s.OnError(ctx, err)
 }
