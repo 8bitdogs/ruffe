@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrResultWasSent = errors.New("result was sent")
+	ErrResponseWasAlreadySent = errors.New("result was sent")
 )
 
 type Context interface {
@@ -39,6 +39,7 @@ func ContextFromRequest(w http.ResponseWriter, r *http.Request) Context {
 	jc := &jsonContent{}
 	result := &ctx{
 		// TODO: parse Accept header to define correct marshaler
+		// Github issue: https://github.com/8bitdogs/ruffe/issues/1
 		rm:             jc,
 		ru:             emptyUnmarshaler{},
 		r:              r,
@@ -47,6 +48,7 @@ func ContextFromRequest(w http.ResponseWriter, r *http.Request) Context {
 	if r.ContentLength > 0 {
 		// TODO: parse Content-type to define correct unmarshaler
 		// currently ruffe supports only json
+		// Github issue: https://github.com/8bitdogs/ruffe/issues/2
 		result.ru = jc
 	}
 	return result
@@ -66,7 +68,7 @@ func (c *ctx) Bind(v interface{}) error {
 
 func (c *ctx) Result(code int, v interface{}) error {
 	if c.isSent {
-		return ErrResultWasSent
+		return ErrResponseWasAlreadySent
 	}
 	if v != nil {
 		c.Header().Add(ContentTypeHeader, c.rm.ContentType())
