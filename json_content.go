@@ -12,7 +12,7 @@ func (c jsonContent) Unmarshal(r io.Reader, v interface{}) error {
 }
 
 func (c jsonContent) ContentType() string {
-	return "application/json"
+	return jsonContentTypeValue
 }
 
 func (c jsonContent) Marshal(w io.Writer, v interface{}) error {

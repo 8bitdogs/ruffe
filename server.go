@@ -2,27 +2,27 @@ package ruffe
 
 import "net/http"
 
-type Server struct {
+type Router struct {
 	middlewares *Middleware
 	mux         map[string]*http.ServeMux
 }
 
-func New() *Server {
-	return &Server{
+func New() *Router {
+	return &Router{
 		mux:         make(map[string]*http.ServeMux),
 		middlewares: NewMiddlewareFunc(func(Context) error { return nil }),
 	}
 }
 
-func (s *Server) Use(h Handler) {
+func (s *Router) Use(h Handler) {
 	s.middlewares = s.middlewares.Wrap(h)
 }
 
-func (s *Server) UseFunc(f func(Context) error) {
+func (s *Router) UseFunc(f func(Context) error) {
 	s.Use(HandlerFunc(f))
 }
 
-func (s *Server) Handle(pattern, method string, h Handler) {
+func (s *Router) Handle(pattern, method string, h Handler) {
 	if h == nil {
 		return
 	}
@@ -38,15 +38,15 @@ func (s *Server) Handle(pattern, method string, h Handler) {
 	})
 }
 
-func (s *Server) HandleFunc(pattern, method string, f func(Context) error) {
+func (s *Router) HandleFunc(pattern, method string, f func(Context) error) {
 	s.Handle(pattern, method, HandlerFunc(f))
 }
 
-func (s *Server) OnError(f func(Context, error) error) {
+func (s *Router) OnError(f func(Context, error) error) {
 	s.middlewares.OnError = f
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mux, ok := s.mux[r.Method]
 	if !ok {
 		w.WriteHeader(http.StatusMethodNotAllowed)
