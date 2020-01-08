@@ -10,7 +10,7 @@ type Router struct {
 func New() *Router {
 	return &Router{
 		mux:         make(map[string]*http.ServeMux),
-		middlewares: NewMiddlewareFunc(func(Context) error { return nil }),
+		middlewares: NewMiddleware(emptyHandler),
 	}
 }
 
