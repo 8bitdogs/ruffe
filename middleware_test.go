@@ -1,6 +1,18 @@
 package ruffe
 
-import "testing"
+import (
+	"net/http"
+	"testing"
+)
+
+type fakeCtx struct {
+	http.ResponseWriter
+}
+
+func (f fakeCtx) done() bool                    { return false }
+func (f fakeCtx) Request() *http.Request        { return nil }
+func (f fakeCtx) Bind(interface{}) error        { return nil }
+func (f fakeCtx) Result(int, interface{}) error { return nil }
 
 func TestMiddlewareWrapSequence(t *testing.T) {
 	results := make([]bool, 3)
@@ -17,9 +29,9 @@ func TestMiddlewareWrapSequence(t *testing.T) {
 		if !results[1] {
 			t.Fatalf("wrong sequence. second middleware wasn't triggered")
 		}
-		//results[2] = true
+		results[2] = true
 		return nil
-	})).Handle(nil)
+	})).Handle(fakeCtx{})
 	if err != nil {
 		t.FailNow()
 	}
