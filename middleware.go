@@ -41,6 +41,9 @@ func (m *Middleware) Handle(ctx Context) error {
 }
 
 func (m *Middleware) err(ctx Context, err error) error {
+	if err == nil {
+		return nil
+	}
 	if m.OnError == nil {
 		return err
 	}
