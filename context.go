@@ -1,6 +1,7 @@
 package ruffe
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -27,7 +28,16 @@ type responseMarshaler interface {
 	Marshal(w io.Writer, v interface{}) error
 }
 
-type ctx struct {
+func Store(ctx Context, key interface{}, value interface{}) {
+	inner := ctx.(*innerContext)
+	inner.r = inner.r.WithContext(context.WithValue(inner.r.Context(), key, value))
+}
+
+func Load(ctx Context, key interface{}) interface{} {
+	return ctx.Request().Context().Value(key)
+}
+
+type innerContext struct {
 	isSent bool
 	http.ResponseWriter
 	r  *http.Request
@@ -37,7 +47,7 @@ type ctx struct {
 
 func ContextFromRequest(w http.ResponseWriter, r *http.Request) Context {
 	jc := &jsonContent{}
-	result := &ctx{
+	result := &innerContext{
 		// TODO: parse Accept header to define correct marshaler
 		// Github issue: https://github.com/8bitdogs/ruffe/issues/1
 		rm:             jc,
@@ -54,19 +64,19 @@ func ContextFromRequest(w http.ResponseWriter, r *http.Request) Context {
 	return result
 }
 
-func (c *ctx) done() bool {
+func (c *innerContext) done() bool {
 	return c.isSent
 }
 
-func (c *ctx) Request() *http.Request {
+func (c *innerContext) Request() *http.Request {
 	return c.r
 }
 
-func (c *ctx) Bind(v interface{}) error {
+func (c *innerContext) Bind(v interface{}) error {
 	return c.ru.Unmarshal(c.r.Body, v)
 }
 
-func (c *ctx) Result(code int, v interface{}) error {
+func (c *innerContext) Result(code int, v interface{}) error {
 	if c.isSent {
 		return ErrResponseWasAlreadySent
 	}
