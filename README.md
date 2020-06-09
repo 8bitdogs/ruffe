@@ -97,3 +97,44 @@ func hello(_ ruffe.Context) error {
 	return Err
 }
 ```
+
+#### Using custom request router
+```go
+package main
+
+import (
+	"net/http"
+
+	"github.com/8bitdogs/ruffe"
+	"github.com/gorilla/mux"
+)
+
+type Router struct {
+	*mux.Router
+}
+
+func (r *Router) Handle(pattern string, handler http.Handler) {
+	r.Router.Handle(pattern, handler)
+}
+
+func (r *Router) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	r.Router.HandleFunc(pattern, handler)
+}
+
+type muxCreator struct{}
+
+func (muxCreator) Create() ruffe.Mux {
+	return &Router{
+		Router: mux.NewRouter(),
+	}
+}
+
+func main() {
+	r := ruffe.NewMux(muxCreator{})
+	r.HandleFunc("/foo/{id}", "GET", func(ctx ruffe.Context) error {
+		return ctx.Result(http.StatusOK, "bar"+mux.Vars(ctx.Request())["id"])
+	})
+	http.ListenAndServe(":3001", r)
+}
+
+```
