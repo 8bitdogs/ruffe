@@ -1,15 +1,33 @@
 package ruffe
 
-import "net/http"
+import (
+	"net/http"
+)
+
+type MuxCreator interface {
+	Create() Mux
+}
+
+type Mux interface {
+	Handle(pattern string, handler http.Handler)
+	HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request))
+	ServeHTTP(w http.ResponseWriter, r *http.Request)
+}
 
 type Router struct {
 	middlewares *Middleware
-	mux         map[string]*http.ServeMux
+	mc          MuxCreator
+	mux         map[string]Mux //*http.ServeMux
 }
 
 func New() *Router {
+	return NewMux(muxCreator{})
+}
+
+func NewMux(mc MuxCreator) *Router {
 	return &Router{
-		mux:         make(map[string]*http.ServeMux),
+		mux:         make(map[string]Mux),
+		mc:          mc,
 		middlewares: NewMiddleware(emptyHandler),
 	}
 }
@@ -28,7 +46,7 @@ func (s *Router) Handle(pattern, method string, h Handler) {
 	}
 	mux, ok := s.mux[method]
 	if !ok {
-		mux = http.NewServeMux()
+		mux = s.mc.Create()
 		s.mux[method] = mux
 	}
 	h = s.middlewares.Wrap(h)
