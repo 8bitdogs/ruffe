@@ -46,7 +46,7 @@ mw := ruffe.NewMiddlewareFunc(func(_ ruffe.Context) error {
 mwh := mw.WrapFunc(hello) // WrapFunc returns middleware
 
 // add handler
-_ = rs.Handle("/", http.MethodGet, mwh) // Handle returns middleware
+rs.Handle("/", http.MethodGet, mwh) // Handle returns middleware
 ```
 __server middleware__
 ```go
