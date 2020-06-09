@@ -113,6 +113,8 @@ type Router struct {
 	*mux.Router
 }
 
+// We have to override gorilla Handle and HandleFunc, because those two functions are returning gorilla Router instance
+
 func (r *Router) Handle(pattern string, handler http.Handler) {
 	r.Router.Handle(pattern, handler)
 }
@@ -132,6 +134,7 @@ func (muxCreator) Create() ruffe.Mux {
 func main() {
 	r := ruffe.NewMux(muxCreator{})
 	r.HandleFunc("/foo/{id}", "GET", func(ctx ruffe.Context) error {
+		// as you can see, gorilla mux features are available :) 
 		return ctx.Result(http.StatusOK, "bar"+mux.Vars(ctx.Request())["id"])
 	})
 	http.ListenAndServe(":3001", r)
