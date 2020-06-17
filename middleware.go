@@ -28,6 +28,25 @@ func (m *Middleware) WrapFunc(f func(Context) error) *Middleware {
 	return m.Wrap(HandlerFunc(f))
 }
 
+// WrapAfter invoke middleware handler after wrapped handler
+func (m *Middleware) WrapAfter(h Handler) *Middleware {
+	return &Middleware{
+		parent: m.parent,
+		h: HandlerFunc(func(ctx Context) error {
+			err := m.err(ctx, h.Handle(ctx))
+			if err != nil {
+				return err
+			}
+			return m.Handle(ctx)
+		}),
+		OnError: m.OnError,
+	}
+}
+
+func (m *Middleware) WrapAfterFunc(f func(Context) error) *Middleware {
+	return m.WrapAfter(HandlerFunc(f))
+}
+
 func (m *Middleware) Handle(ctx Context) error {
 	if m.parent != nil {
 		if err := m.parent.Handle(ctx); err != nil {
