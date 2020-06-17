@@ -6,5 +6,6 @@ const (
 )
 
 const (
+	xmlContentTypeValue  = "application/xml"
 	jsonContentTypeValue = "application/json"
 )

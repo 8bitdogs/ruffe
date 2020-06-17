@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrResponseWasAlreadySent = errors.New("result was sent")
+	ErrUnsupportableContext   = errors.New("unsupportable context")
 )
 
 type Context interface {
@@ -19,11 +20,11 @@ type Context interface {
 	Result(int, interface{}) error
 }
 
-type requestUnmarshaler interface {
+type requestUnmarshaller interface {
 	Unmarshal(r io.Reader, v interface{}) error
 }
 
-type responseMarshaler interface {
+type responseMarshaller interface {
 	ContentType() string
 	Marshal(w io.Writer, v interface{}) error
 }
@@ -41,8 +42,8 @@ type innerContext struct {
 	isSent bool
 	http.ResponseWriter
 	r  *http.Request
-	ru requestUnmarshaler
-	rm responseMarshaler
+	ru requestUnmarshaller
+	rm responseMarshaller
 }
 
 func ContextFromRequest(w http.ResponseWriter, r *http.Request) Context {
