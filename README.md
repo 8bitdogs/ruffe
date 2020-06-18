@@ -1,9 +1,11 @@
 
 # Ruffe
 [![Go Report](https://goreportcard.com/badge/github.com/8bitdogs/ruffe)](https://goreportcard.com/report/github.com/8bitdogs/ruffe)
-[![GoDoc](https://pkg.go.dev/github.com/8bitdogs/ruffe?status.svg)](https://pkg.go.dev/github.com/8bitdogs/ruffe)	
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/8bitdogs/ruffe)
+![License](https://img.shields.io/github/license/8bitdogs/ruffe)
+![Tag](https://img.shields.io/github/v/tag/8bitdogs/ruffe)
 
-![Alt text](ruffe.png?raw=true "Ruffe")
+![Ruffe preview](ruffe.png?raw=true "Ruffe")
 
 Golang HTTP handler
 				
