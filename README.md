@@ -1,10 +1,12 @@
 
-# Ruffe 
+# Ruffe
+[![Go Report](https://goreportcard.com/badge/github.com/8bitdogs/ruffe)](https://goreportcard.com/report/github.com/8bitdogs/ruffe)
+[![GoDoc](https://pkg.go.dev/github.com/8bitdogs/ruffe?status.svg)](https://pkg.go.dev/github.com/8bitdogs/ruffe)	
+
 ![Alt text](ruffe.png?raw=true "Ruffe")
 
 Golang HTTP handler
-
-- [Guide](#guide)				
+				
 - [Installing](#installing)	
 - [Router](#router)
 	- [Customization](#customization)
