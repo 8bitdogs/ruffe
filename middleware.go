@@ -18,9 +18,8 @@ func NewMiddlewareFunc(f func(Context) error) *Middleware {
 
 func (m *Middleware) Wrap(h Handler) *Middleware {
 	return &Middleware{
-		parent:  m,
-		h:       h,
-		OnError: m.OnError,
+		parent: m,
+		h:      h,
 	}
 }
 
@@ -39,7 +38,6 @@ func (m *Middleware) WrapAfter(h Handler) *Middleware {
 			}
 			return m.Handle(ctx)
 		}),
-		OnError: m.OnError,
 	}
 }
 
