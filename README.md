@@ -4,10 +4,23 @@
 
 Golang HTTP handler
 
-## Guide
+- [Guide](#guide)				
+- [Installing](#installing)	
+- [Router](#router)
+	- [Customization](#customization)
+- [Interceptors](#interceptors)
+- [Middlewares](#middlewares)
+	- [Handler middleware](#handler-middleware)
+	- [Router middleware](#router-middleware)
+- [Error Handling](#error-handling)
 
-### Examples
-#### 1. Create ruffe instance, add http handler and start it with http.ListenAndServer
+## Guide
+### Installing 
+```
+go get -u github.com/8bitdogs/ruffe
+```
+
+### Router
 ```go
 package main
 
@@ -19,13 +32,13 @@ import (
 
 func main() {
 	// Ruffe instance
-	rs := ruffe.New()
+	rr := ruffe.New()
 
 	// add handler
-	rs.HandleFunc("/", http.MethodGet, hello)
+	rr.HandleFunc("/", http.MethodGet, hello)
 
 	// Start server
-	http.ListenAndServe(":8080", rs)
+	http.ListenAndServe(":3030", rs)
 }
 
 // hello handler
@@ -33,72 +46,8 @@ func hello(ctx ruffe.Context) error {
 	return ctx.Result(http.StatusOK, "hello world")
 }
 ```
-#### Middleware
-__handler middleware__
-```go
-// Ruffe Middleware
-mw := ruffe.NewMiddlewareFunc(func(_ ruffe.Context) error {
-    // this handler will occurs before `hello handler`
-    return nil
-})
-
-// Wrap hello handler with mw middleware
-mwh := mw.WrapFunc(hello) // WrapFunc returns middleware
-
-// add handler
-rs.Handle("/", http.MethodGet, mwh) // Handle returns middleware
-```
-__server middleware__
-```go
-// Applying middleware for all handler
-rs.UseFunc(func(_ ruffe.Context) error {
-    // server middleware calling before handler
-    return nil
-})
-
-// add handler
-rs.HandleFunc("/", http.MethodGet, hello)
-```
-#### Error handling
-```go
-package main
-
-import (
-	"errors"
-	"net/http"
-
-	"github.com/8bitdogs/ruffe"
-)
-
-var Err = errors.New("error")
-
-func main() {
-	// Ruffe instance
-	rs := ruffe.New()
-
-	// Define error handler
-	rs.OnError = func(_ ruffe.Context, err error) error {
-		if err == Err {
-			// Caught!
-			return nil
-		}
-		return nil
-	}
-
-	// add handler
-	rs.HandleFunc("/", http.MethodGet, hello)
-
-	// Start server
-	http.ListenAndServe(":8080", rs)
-}
-
-// hello handler
-func hello(_ ruffe.Context) error {
-	return Err
-}
-```
-
-#### Using custom request router
+#### Customization
+Using custom request router
 ```go
 package main
 
@@ -137,7 +86,88 @@ func main() {
 		// as you can see, gorilla mux features are available :) 
 		return ctx.Result(http.StatusOK, "bar"+mux.Vars(ctx.Request())["id"])
 	})
-	http.ListenAndServe(":3001", r)
+	http.ListenAndServe(":3030", r)
+}
+```
+
+### Interceptors
+example with logging interceptor
+```go
+rr := ruffe.New()
+
+// adding interceptor
+rr.AppendInterceptor(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+	log.Println(r.URL, r.Method, r.Header)
+	next(w, r)
+	log.Println("done")
+})
+
+// ... handlers registration
+
+http.ListenAndServe(":3030", rr)
+```
+
+### Middlewares
+#### Handler middleware
+```go
+// Initializing Ruffe Middleware
+// Middleware implements ruffe.Handler interface
+mw := ruffe.NewMiddlewareFunc(func(_ ruffe.Context) error {
+	// Middleware logic
+	return nil
+})
+
+// Add middleware handler before calling <ruffe handler> 
+mwh := mw.Wrap(<ruffe handler>) // WrapFunc returns middleware
+
+// Add middleware handler after calling <ruffe handler> 
+mwh := mw.WrapAfter(<ruffe handler>) // WrapAfterFunc returns middleware
+```
+#### Router middleware
+```go
+rr := ruffe.New()
+
+// applies handler which invokes before executing each registered handler
+rr.Use(<ruffe handler>)
+
+// applies handler which invokes after executing each registered handler
+rr.UseAfter(<ruffe handler>)
+```
+#### Error handling
+```go
+package main
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/8bitdogs/ruffe"
+)
+
+var Err = errors.New("error")
+
+func main() {
+	// Ruffe instance
+	rr := ruffe.New()
+
+	// Define error handler
+	rr.OnError = func(_ ruffe.Context, err error) error {
+		if err == Err {
+			// Caught!
+			return nil
+		}
+		return nil
+	}
+
+	// add handler
+	rr.HandleFunc("/", http.MethodGet, hello)
+
+	// Start server
+	http.ListenAndServe(":3030", rs)
 }
 
+// hello handler
+func hello(_ ruffe.Context) error {
+	return Err
+}
 ```
