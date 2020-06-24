@@ -19,7 +19,7 @@ Golang HTTP handler
 - [Error Handling](#error-handling)
 
 ## Guide
-### Installing 
+### Installing
 ```
 go get -u github.com/8bitdogs/ruffe
 ```

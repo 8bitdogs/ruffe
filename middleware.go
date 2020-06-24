@@ -19,7 +19,7 @@ func NewMiddlewareFunc(f func(Context) error) *Middleware {
 func (m *Middleware) Wrap(h Handler) *Middleware {
 	return &Middleware{
 		parent: m,
-		h:      h,
+		h:      m.mwf(m.h, h),
 	}
 }
 
@@ -30,15 +30,21 @@ func (m *Middleware) WrapFunc(f func(Context) error) *Middleware {
 // WrapAfter invoke middleware handler after wrapped handler
 func (m *Middleware) WrapAfter(h Handler) *Middleware {
 	return &Middleware{
-		parent: m.parent,
-		h: HandlerFunc(func(ctx Context) error {
-			err := m.err(ctx, h.Handle(ctx))
-			if err != nil {
-				return err
-			}
-			return m.Handle(ctx)
-		}),
+		parent: m,
+		h:      m.mwf(h, m.h),
 	}
+}
+
+func (m *Middleware) mwf(first, last Handler) Handler {
+	return HandlerFunc(func(ctx Context) error {
+		if err := m.err(ctx, first.Handle(ctx)); err != nil {
+			return err
+		}
+		if ctx.done() {
+			return nil
+		}
+		return m.err(ctx, last.Handle(ctx))
+	})
 }
 
 func (m *Middleware) WrapAfterFunc(f func(Context) error) *Middleware {
@@ -46,15 +52,7 @@ func (m *Middleware) WrapAfterFunc(f func(Context) error) *Middleware {
 }
 
 func (m *Middleware) Handle(ctx Context) error {
-	if m.parent != nil {
-		if err := m.parent.Handle(ctx); err != nil {
-			return m.err(ctx, err)
-		}
-	}
-	if ctx.done() {
-		return nil
-	}
-	return m.err(ctx, m.h.Handle(ctx))
+	return m.h.Handle(ctx)
 }
 
 func (m *Middleware) err(ctx Context, err error) error {

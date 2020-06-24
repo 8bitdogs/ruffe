@@ -15,7 +15,9 @@ type Mux interface {
 }
 
 type Router struct {
-	middlewares  *Middleware
+	pathPrefix   string
+	head         *Middleware
+	tail         *Middleware
 	mc           MuxCreator
 	mux          map[string]Mux //*http.ServeMux
 	interceptors []func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc)
@@ -32,90 +34,110 @@ func NewMux(mc MuxCreator) *Router {
 	return &Router{
 		mux:          make(map[string]Mux),
 		mc:           mc,
-		middlewares:  NewMiddleware(emptyHandler),
+		head:         NewMiddleware(emptyHandler),
+		tail:         NewMiddleware(emptyHandler),
 		interceptors: []func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc){},
 	}
 }
 
 // Use applies handler which invokes before executing each registered handler
-func (s *Router) Use(h Handler) {
-	s.middlewares = s.middlewares.Wrap(h)
+func (r *Router) Use(h Handler) {
+	r.head = r.head.Wrap(h)
 }
 
 // UseFunc applies handler which invokes before executing each registered handler
-func (s *Router) UseFunc(f func(Context) error) {
-	s.Use(HandlerFunc(f))
+func (r *Router) UseFunc(f func(Context) error) {
+	r.Use(HandlerFunc(f))
 }
 
 // UseAfter applies handler which invokes after executing each registered handler
-func (s *Router) UseAfter(h Handler) {
-	s.middlewares = s.middlewares.WrapAfter(h)
+func (r *Router) UseAfter(h Handler) {
+	r.tail = r.tail.Wrap(h)
 }
 
 // UseAfterFunc applies handler which invokes after executing each registered handler
-func (s *Router) UseAfterFunc(f func(Context) error) {
-	s.UseAfter(HandlerFunc(f))
+func (r *Router) UseAfterFunc(f func(Context) error) {
+	r.UseAfter(HandlerFunc(f))
 }
 
 // AppendInterceptor adding http.Handler with reference on next interceptor which invokes before ruffe handler
 // Warning: Don't forget to call next(w, r) inside interceptor, if it won't be called handler will stop on current executing interceptor
-func (s *Router) AppendInterceptor(i func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc)) {
+func (r *Router) AppendInterceptor(i func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc)) {
 	if i == nil {
 		return
 	}
-	s.interceptors = append(s.interceptors, i)
+	r.interceptors = append(r.interceptors, i)
 }
 
 // Handle registers the handler for the given pattern with method.
 // If a handler already exists for pattern, Handle panics (Only for default Mux).
-func (s *Router) Handle(pattern, method string, h Handler) {
+func (r *Router) Handle(pattern, method string, h Handler) {
 	if h == nil {
-		return
+		panic("handler cannot be nil")
 	}
-	mux, ok := s.mux[method]
+
+	mux, ok := r.mux[method]
 	if !ok {
-		mux = s.mc.Create()
-		s.mux[method] = mux
+		mux = r.mc.Create()
+		r.mux[method] = mux
 	}
 
 	// apply middlewares
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		ctx := ContextFromRequest(w, r)
-		mw := s.middlewares.Wrap(h)
-		mw.OnError = s.onError
+	handler := func(w http.ResponseWriter, rq *http.Request) {
+		ctx := ContextFromRequest(w, rq)
+		mw := r.tail.WrapAfter(r.head.Wrap(h))
+		mw.OnError = r.onError
 		// TODO: this how to handle unhandled error
 		// maybe make sense to store it into request context and pass it to interceptors?
 		_ = mw.Handle(ctx)
 	}
 
 	// apply interceptors
-	for i := len(s.interceptors) - 1; i >= 0; i-- {
+	for i := len(r.interceptors) - 1; i >= 0; i-- {
 		h := handler
-		itc := s.interceptors[i]
-		handler = func(w http.ResponseWriter, r *http.Request) {
-			itc(w, r, h)
+		itc := r.interceptors[i]
+		handler = func(w http.ResponseWriter, rq *http.Request) {
+			itc(w, rq, h)
 		}
 	}
 
-	mux.HandleFunc(pattern, handler)
+	mux.HandleFunc(r.pathPrefix+pattern, handler)
 }
 
 // HandleFunc registers the handler for the given pattern with method.
 // If a handler already exists for pattern, Handle panics (Only for default Mux).
-func (s *Router) HandleFunc(pattern, method string, f func(Context) error) {
-	s.Handle(pattern, method, HandlerFunc(f))
+func (r *Router) HandleFunc(pattern, method string, f func(Context) error) {
+	r.Handle(pattern, method, HandlerFunc(f))
 }
 
 // OnError assign error handler for Route
-func (s *Router) OnError(f func(Context, error) error) {
-	s.onError = f
+func (r *Router) OnError(f func(Context, error) error) {
+	r.onError = f
 }
 
-func (s *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	mux, ok := s.mux[r.Method]
+// Subrouter creates copy of router
+// Handle and HandleFunc will register handlers to parent router mux
+func (r *Router) Subrouter(pathPrefix string) *Router {
+	interceptors := make([]func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc), len(r.interceptors))
+	for i := range r.interceptors {
+		interceptors[i] = r.interceptors[i]
+	}
+	return &Router{
+		pathPrefix:   pathPrefix,
+		head:         r.head,
+		tail:         r.tail,
+		mc:           r.mc,
+		mux:          r.mux,
+		interceptors: interceptors,
+		onError:      r.onError,
+	}
+}
+
+func (r *Router) ServeHTTP(w http.ResponseWriter, rq *http.Request) {
+	mux, ok := r.mux[rq.Method]
 	if !ok {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	mux.ServeHTTP(w, r)
+	mux.ServeHTTP(w, rq)
 }
