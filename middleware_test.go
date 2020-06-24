@@ -19,19 +19,19 @@ func TestMiddlewareWrapSequence(t *testing.T) {
 	err := NewMiddleware(HandlerFunc(func(_ Context) error {
 		results[0] = true
 		return nil
-	})).Wrap(HandlerFunc(func(_ Context) error {
+	})).BeforeFunc(func(_ Context) error {
 		if !results[0] {
 			t.Fatalf("wrong sequence. first middleware wasn't triggered")
 		}
 		results[1] = true
 		return nil
-	})).Wrap(HandlerFunc(func(_ Context) error {
+	}).BeforeFunc(func(_ Context) error {
 		if !results[1] {
 			t.Fatalf("wrong sequence. second middleware wasn't triggered")
 		}
 		results[2] = true
 		return nil
-	})).Handle(fakeCtx{})
+	}).Handle(fakeCtx{})
 	if err != nil {
 		t.FailNow()
 	}

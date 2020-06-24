@@ -42,7 +42,7 @@ func NewMux(mc MuxCreator) *Router {
 
 // Use applies handler which invokes before executing each registered handler
 func (r *Router) Use(h Handler) {
-	r.head = r.head.Wrap(h)
+	r.head = r.head.Before(h)
 }
 
 // UseFunc applies handler which invokes before executing each registered handler
@@ -52,7 +52,7 @@ func (r *Router) UseFunc(f func(Context) error) {
 
 // UseAfter applies handler which invokes after executing each registered handler
 func (r *Router) UseAfter(h Handler) {
-	r.tail = r.tail.Wrap(h)
+	r.tail = r.tail.After(h)
 }
 
 // UseAfterFunc applies handler which invokes after executing each registered handler
@@ -85,7 +85,7 @@ func (r *Router) Handle(pattern, method string, h Handler) {
 	// apply middlewares
 	handler := func(w http.ResponseWriter, rq *http.Request) {
 		ctx := ContextFromRequest(w, rq)
-		mw := r.tail.WrapAfter(r.head.Wrap(h))
+		mw := r.tail.After(r.head.Before(h))
 		mw.OnError = r.onError
 		// TODO: this how to handle unhandled error
 		// maybe make sense to store it into request context and pass it to interceptors?
