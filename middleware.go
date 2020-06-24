@@ -37,13 +37,13 @@ func (m *Middleware) WrapAfter(h Handler) *Middleware {
 
 func (m *Middleware) mwf(first, last Handler) Handler {
 	return HandlerFunc(func(ctx Context) error {
-		if err := m.err(ctx, first.Handle(ctx)); err != nil {
+		if err := first.Handle(ctx); err != nil {
 			return err
 		}
 		if ctx.done() {
 			return nil
 		}
-		return m.err(ctx, last.Handle(ctx))
+		return last.Handle(ctx)
 	})
 }
 
@@ -52,10 +52,7 @@ func (m *Middleware) WrapAfterFunc(f func(Context) error) *Middleware {
 }
 
 func (m *Middleware) Handle(ctx Context) error {
-	return m.h.Handle(ctx)
-}
-
-func (m *Middleware) err(ctx Context, err error) error {
+	err := m.h.Handle(ctx)
 	if err == nil {
 		return nil
 	}
