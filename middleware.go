@@ -1,7 +1,6 @@
 package ruffe
 
 type Middleware struct {
-	parent  *Middleware
 	h       Handler
 	OnError func(Context, error) error
 }
@@ -16,32 +15,33 @@ func NewMiddlewareFunc(f func(Context) error) *Middleware {
 	return NewMiddleware(HandlerFunc(f))
 }
 
+// Before create middleware which call Middleware handler before handler from argument
 func (m *Middleware) Before(h Handler) *Middleware {
 	return &Middleware{
-		parent: m,
-		h:      m.mwf(m.h, h),
+		h: m.mwf(m.h, h),
 	}
 }
 
+// BeforeFunc do same as Before
 func (m *Middleware) BeforeFunc(f func(Context) error) *Middleware {
 	return m.Before(HandlerFunc(f))
 }
 
-// WrapAfter invoke middleware handler after wrapped handler
+// After create middleware which call Middleware handler after handler from argument
 func (m *Middleware) After(h Handler) *Middleware {
 	return &Middleware{
-		parent: m,
-		h:      m.mwf(h, m.h),
+		h: m.mwf(h, m.h),
 	}
 }
 
+// AfterFunc do same as After
 func (m *Middleware) AfterFunc(f func(Context) error) *Middleware {
 	return m.After(HandlerFunc(f))
 }
 
+// Wrap crate middleware from f argument where pass Middleware handler as next argument
 func (m *Middleware) Wrap(f func(ctx Context, next Handler) error) *Middleware {
 	return &Middleware{
-		parent: m,
 		h: HandlerFunc(func(ctx Context) error {
 			if ctx.done() {
 				return nil

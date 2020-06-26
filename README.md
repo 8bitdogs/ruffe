@@ -123,10 +123,10 @@ mw := ruffe.NewMiddlewareFunc(func(_ ruffe.Context) error {
 })
 
 // Add middleware handler before calling <ruffe handler> 
-mwh := mw.Wrap(<ruffe handler>) // WrapFunc returns middleware
+mwh := mw.Before(<ruffe handler>) // WrapFunc returns middleware
 
 // Add middleware handler after calling <ruffe handler> 
-mwh := mw.WrapAfter(<ruffe handler>) // WrapAfterFunc returns middleware
+mwh := mw.After(<ruffe handler>) // WrapAfterFunc returns middleware
 ```
 #### Router middleware
 ```go
